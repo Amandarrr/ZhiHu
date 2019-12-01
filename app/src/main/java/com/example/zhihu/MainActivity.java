@@ -51,26 +51,10 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         newsAdapter = new NewsAdapter(newsList, topNewsList);
         recyclerView.setAdapter(newsAdapter);
-        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            private int totalItemCount;
-            private int firstVisibleItem;
-            private int visibleItemCount;
-
+        recyclerView.addOnScrollListener(new EndlessRecyclerOnScrollListener() {
             @Override
-            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
-                super.onScrollStateChanged(recyclerView, newState);
-            }
-
-            @Override
-            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
-                super.onScrolled(recyclerView, dx, dy);
-                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                totalItemCount = layoutManager.getItemCount();
-                firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
-                visibleItemCount = recyclerView.getChildCount();
-                if (((totalItemCount - visibleItemCount) <= firstVisibleItem)) {
-                    load(false);
-                }
+            public void onLoadMore() {
+                load(false);
             }
         });
     }
@@ -78,7 +62,6 @@ public class MainActivity extends AppCompatActivity {
     private void load(boolean isToday) {
         if (isToday) {
             sendRequest("https://news-at.zhihu.com/api/3/news/latest", true);
-//            Toast.makeText(MainActivity.this, dateList.get(dateList.size() - 1)+"hehe", Toast.LENGTH_SHORT).show();
         } else {
             sendRequest("https://news-at.zhihu.com/api/3/news/before/" + dateList.get(dateList.size() - 1), false);
             Toast.makeText(MainActivity.this, dateList.get(dateList.size() - 1), Toast.LENGTH_SHORT).show();
@@ -98,9 +81,11 @@ public class MainActivity extends AppCompatActivity {
                 if (response.body() != null) {
                     String result = response.body().string();
                     Message message = Message.obtain();
-                    if (isToday)
+                    if (isToday) {
                         message.what = 1;
-                    else message.what = 0;
+                    } else {
+                        message.what = 0;
+                    }
                     message.obj = result;
                     handler.sendMessage(message);
                 }
