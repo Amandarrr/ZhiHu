@@ -1,5 +1,6 @@
 package com.example.zhihu;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -7,13 +8,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -30,54 +30,69 @@ public class MainActivity extends AppCompatActivity {
 
     private List<News> newsList = new ArrayList<>();
     private List<TopNews> topNewsList = new ArrayList<>();
-    private List<String> dateList = new ArrayList<>();
+    private String date;
     private NewsAdapter newsAdapter;
-    private static Context context;
+    private RecyclerView recyclerView;
+    private static boolean isComplete;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        context = getApplicationContext();
-        Toolbar mToolbar = findViewById(R.id.home_toolbar);
-        setSupportActionBar(mToolbar);
+        backTop();
         getTime();
         load(true);
         refreshList();
     }
 
+    //上拉加载
     private void initAdapter() {
-        RecyclerView recyclerView = findViewById(R.id.recycler_view);
+        recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        newsAdapter = new NewsAdapter(newsList, topNewsList);
+        newsAdapter = new NewsAdapter(newsList, topNewsList,MainActivity.this);
         recyclerView.setAdapter(newsAdapter);
-        recyclerView.addOnScrollListener(new EndlessRecyclerOnScrollListener() {
+        recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            private int totalItemCount;
+            private int firstVisibleItem;
+            private int visibleItemCount;
             @Override
-            public void onLoadMore() {
-                load(false);
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+                LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                totalItemCount = layoutManager.getItemCount();
+                firstVisibleItem = layoutManager.findFirstVisibleItemPosition();
+                visibleItemCount = recyclerView.getChildCount();
+                if ( ((totalItemCount - visibleItemCount) <= firstVisibleItem) && isComplete) {
+                    load(false);
+                }
             }
         });
     }
 
     private void load(boolean isToday) {
         if (isToday) {
+            isComplete=false;
             sendRequest("https://news-at.zhihu.com/api/3/news/latest", true);
         } else {
-            sendRequest("https://news-at.zhihu.com/api/3/news/before/" + dateList.get(dateList.size() - 1), false);
-            Toast.makeText(MainActivity.this, dateList.get(dateList.size() - 1), Toast.LENGTH_SHORT).show();
+            isComplete=false;
+            sendRequest("http://news-at.zhihu.com/api/4/news/before/" + date, false);
         }
     }
 
     private void sendRequest(String url, final boolean isToday) {
         Client.sendRequest(url, new Callback() {
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onFailure(@NonNull Call call,@NonNull IOException e) {
                 Log.d("Failure", e.getMessage());
                 e.printStackTrace();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(@NonNull Call call,@NonNull Response response) throws IOException {
                 if (response.body() != null) {
                     String result = response.body().string();
                     Message message = Message.obtain();
@@ -93,30 +108,25 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    //获得当前的date用来得到url
-    private void addDateList(Bean bean) {
-        dateList.add(bean.getDate());
-    }
-
     @SuppressLint("HandlerLeak")
     Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             Gson gson = new Gson();
             Bean bean = gson.fromJson(msg.obj.toString(), Bean.class);
+            date=bean.getDate();
             switch (msg.what) {
                 case 1:
                     addTopNews(bean);
                     addNews(bean);
-                    addDateList(bean);
                     initAdapter();
                     break;
                 case 0:
                     addNews(bean);
-                    addDateList(bean);
                     break;
             }
             newsAdapter.notifyDataSetChanged();
+            isComplete=true;
         }
     };
 
@@ -148,7 +158,6 @@ public class MainActivity extends AppCompatActivity {
         refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
             public void onRefresh() {
-                dateList.clear();
                 newsList.clear();
                 topNewsList.clear();
                 load(true);
@@ -157,6 +166,19 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    //设置Banner
+    private void backTop(){
+        Toolbar mToolbar = findViewById(R.id.home_toolbar);
+        setSupportActionBar(mToolbar);
+        mToolbar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                recyclerView.scrollToPosition(0);
+            }
+        });
+    }
+
+    //设置欢迎语句
     private void getTime() {
         TextView viewDay = findViewById(R.id.time_day);
         TextView viewMonth = findViewById(R.id.time_month);
@@ -176,10 +198,6 @@ public class MainActivity extends AppCompatActivity {
         } else if (hour > 18 && hour <= 23) {
             viewGreeting.setText("晚上好！^_^");
         } else viewGreeting.setText("睡觉时间到！");
-    }
-
-    public static Context getContext() {
-        return context;
     }
 }
 

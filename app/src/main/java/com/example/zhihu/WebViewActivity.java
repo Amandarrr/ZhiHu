@@ -9,18 +9,17 @@ import android.webkit.WebViewClient;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * WebView控件加载显示网页
+ */
 public class WebViewActivity extends AppCompatActivity {
-    private List newsUrl = new ArrayList();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.web_view);
         Intent intent = getIntent();
-        webLoad(intent.getStringExtra("giaogiao"));
+        webLoad(intent.getStringExtra("lxl"));
     }
 
     private void webLoad(String url) {
@@ -31,9 +30,10 @@ public class WebViewActivity extends AppCompatActivity {
 
     public static void actionStart(Context context, String url) {
         Intent intent = new Intent(context, WebViewActivity.class);
-        /* 为什么要加一个flag */
+        /*  为什么要加一个flag：application与activity的context都继承context
+        *   此处的context是application的，而application启动activity需要flag   */
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra("giaogiao", url);
+        intent.putExtra("lxl", url);
         context.startActivity(intent);
     }
 }

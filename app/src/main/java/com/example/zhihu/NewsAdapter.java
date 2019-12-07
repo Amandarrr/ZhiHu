@@ -20,6 +20,9 @@ import com.youth.banner.loader.ImageLoader;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * RecyclerView的适配器
+ */
 public class NewsAdapter extends RecyclerView.Adapter implements OnBannerListener {
 
     private final static int ITEM_NEWS = 0;
@@ -28,6 +31,7 @@ public class NewsAdapter extends RecyclerView.Adapter implements OnBannerListene
     private List<News> mNewsList;
     private List<TopNews> mTopNewsList;
 //    private List<String> mTimeLineList;
+    private Context context;
 
     static class NewsHolder extends RecyclerView.ViewHolder {
         View newsView;
@@ -63,13 +67,15 @@ public class NewsAdapter extends RecyclerView.Adapter implements OnBannerListene
 //        }
 //    }
 
-    public NewsAdapter(List<News> newsList, List<TopNews> topNews) {
+    public NewsAdapter(List<News> newsList, List<TopNews> topNews,Context context) {
         mNewsList = newsList;
         mTopNewsList = topNews;
 //        mTimeLineList = timeLineList;
+        this.context=context;
     }
 
 
+    //创建viewHolder引入xml
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -97,11 +103,11 @@ public class NewsAdapter extends RecyclerView.Adapter implements OnBannerListene
             NewsHolder newsHolder = (NewsHolder) holder;
             newsHolder.textTitle.setText(news.getTitle());
             newsHolder.textHint.setText(news.getHint());
-            Glide.with(MainActivity.getContext()).load(news.getImage()).into(newsHolder.newsImage);
+            Glide.with(context).load(news.getImage()).into(newsHolder.newsImage);
             newsHolder.newsView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    WebViewActivity.actionStart(MainActivity.getContext(), news.getUrl());
+                    WebViewActivity.actionStart(context, news.getUrl());
                 }
             });
         }
@@ -137,32 +143,26 @@ public class NewsAdapter extends RecyclerView.Adapter implements OnBannerListene
             list_title.add(mTopNewsList.get(i).getTitle());
 
         }
-        //设置样式
-        banner.setBannerStyle(BannerConfig.CIRCLE_INDICATOR_TITLE);
-        //设置图片加载器，图片加载器在下方
-        banner.setImageLoader(new MyLoader());
-        //设置图片网址或地址的集合
-        banner.setImages(list_path);
-        //设置轮播图的标题集合
-        banner.setBannerTitles(list_title);
-        //设置动画效果
-        banner.setBannerAnimation(Transformer.DepthPage);
-        banner.isAutoPlay(true);
-        banner.setDelayTime(4000);
-        //设置指示器的位置，小点点，左中右。
-        banner.setIndicatorGravity(BannerConfig.RIGHT)
-                //以上内容都可写成链式布局，这是轮播图的监听。比较重要。方法在下面。
-                .setOnBannerListener((OnBannerListener) this)
-                //必须最后调用的方法，启动轮播图。
+        //设置Banner
+        banner.setBannerStyle(BannerConfig.CIRCLE_INDICATOR_TITLE);  //设置样式
+        banner.setImageLoader(new MyLoader());  //设置图片加载器
+        banner.setImages(list_path);  //设置图片网址或地址的集合
+        banner.setBannerTitles(list_title);  //设置轮播图的标题集合
+        banner.setBannerAnimation(Transformer.DepthPage);  //设置动画效果
+        banner.isAutoPlay(true);  //设置是否自动轮播
+        banner.setDelayTime(4000);  //设置自动轮播时间
+        banner.setIndicatorGravity(BannerConfig.RIGHT)  //设置指示器的位置
+                .setOnBannerListener(this)
                 .start();
     }
 
+    //Banner的监听效果
     @Override
     public void OnBannerClick(int position) {
-        WebViewActivity.actionStart(MainActivity.getContext(), mTopNewsList.get(position).getUrl());
+        WebViewActivity.actionStart(context, mTopNewsList.get(position).getUrl());
     }
 
-    //    自定义的图片加载器
+    //自定义的图片加载器
     public static class MyLoader extends ImageLoader {
         @Override
         public void displayImage(Context context, Object path, ImageView imageView) {
